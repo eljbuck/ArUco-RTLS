@@ -21,31 +21,42 @@ MARKER_SIZE_CM = 1.918
 # Initialize camera
 cap = cv2.VideoCapture(0)
 
+def compute_relative_distance(tvec_anchor, tvec_tag):
+    # Compute relative translation vector
+    tvec_relative = tvec_tag - tvec_anchor
+
+    distance_from_camera = tvec_tag[0][2]
+
+    # Extract x and y distances
+    distance_x = tvec_relative[0, 0]
+    distance_y = tvec_relative[0, 1]
+    distance_z = max(0, tvec_anchor[0][2] - tvec_tag[0][2])  # Assume anchor is on ground
+
+    return distance_x, distance_y, distance_z
+
 def estimate_pose(frame):
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     corners, ids, _ = cv2.aruco.detectMarkers(gray, aruco_dict, parameters=parameters)
 
     if ids is not None:
         rvec, tvec, _ = cv2.aruco.estimatePoseSingleMarkers(corners, MARKER_SIZE_CM, cameraMatrix=cam_matrix, distCoeffs=dist_coef)
-        
-        # Example of using anchor marker
+        anchor_tvec = None
+        ground_depth = None
         for i, id in enumerate(ids):
             if id == 1:  # Assume the anchor marker has ID 1
                 anchor_rvec = rvec[i]
                 anchor_tvec = tvec[i]
-                print("Anchor marker pose (relative to camera):", anchor_rvec, anchor_tvec)
                 break
         
         for i, id in enumerate(ids):
             if id != 1:  # For other markers
                 marker_rvec = rvec[i]
                 marker_tvec = tvec[i]
-                print(f"Marker {id} pose (relative to camera):", marker_rvec, marker_tvec)
-                # Compute global position
-                # Assuming `anchor_rvec` and `anchor_tvec` are known
-                # Compute position relative to the anchor marker (0, 0, 0)
-                # Apply transformation from camera coordinates to global coordinates
-                # Implement transformation logic here
+
+                if anchor_tvec is not None:
+                    x, y, z = compute_relative_distance(anchor_tvec, marker_tvec)
+                    print(f"Marker {id} coords (relative to anchor): ({x}, {y}, {z})")
+                
 
     return corners, ids
 
