@@ -21,6 +21,20 @@ MARKER_SIZE_CM = 1.918
 # Initialize camera
 cap = cv2.VideoCapture(0)
 
+def get_up_forward_vectors(rvec):
+    # Convert rvec to rotation matrix
+    rotation_matrix, _ = cv2.Rodrigues(rvec)
+
+    # Define up and forward vectors in the marker's local coordinate system
+    up_vector_local = np.array([0, 0, -1], dtype=np.float32)  # Marker’s local up vector
+    forward_vector_local = np.array([0, 1, 0], dtype=np.float32)  # Marker’s local forward vector
+
+    # Compute up and forward vectors in the camera coordinate system
+    up_vector_camera = np.dot(rotation_matrix, up_vector_local)
+    forward_vector_camera = np.dot(rotation_matrix, forward_vector_local)
+
+    return up_vector_camera, forward_vector_camera
+
 def compute_relative_distance(tvec_anchor, tvec_tag):
     # Compute relative translation vector
     tvec_relative = tvec_tag - tvec_anchor
@@ -55,8 +69,8 @@ def estimate_pose(frame):
 
                 if anchor_tvec is not None:
                     x, y, z = compute_relative_distance(anchor_tvec, marker_tvec)
-                    print(f"Marker {id} coords (relative to anchor): ({x}, {y}, {z})")
-                
+                    up_vec, forward_vec = get_up_forward_vectors(marker_rvec)
+                    print(f"Marker {id}:\n  up_vec:         {[f"{value:.2f}" for value in up_vec]}\n  forward_vec:    {[f"{value:.2f}" for value in forward_vec]}")
 
     return corners, ids
 
